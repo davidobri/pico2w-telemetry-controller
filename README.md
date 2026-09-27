@@ -12,7 +12,7 @@ The project is being developed incrementally to demonstrate embedded firmware ar
 - [x] C firmware build environment
 - [x] USB serial console
 - [x] Firmware boot and runtime verification
-- [ ] ADC sensor acquisition
+- [x] ADC sensor acquisition
 - [ ] Timer/interrupt-driven sampling
 - [ ] Circular buffering
 - [ ] Binary telemetry packets
@@ -50,19 +50,20 @@ Planned after completion of the core telemetry system:
 - Visual Studio Code
 - Python ground-station software
 
-## Milestone V0.1 — Board Bring-Up
+## Milestone V0.2 — ADC Acquisition
 
-The initial firmware has been successfully built and flashed to the Pico 2 W.
+Added analog data acquisition using the RP2350 ADC.
 
 Verified functionality:
 
-- Pico SDK toolchain
-- Pico 2 W firmware execution
-- USB CDC serial communication
-- Firmware version reporting
-- Continuous runtime heartbeat
+- ADC0 configured on GPIO26
+- 12-bit ADC measurements
+- Analog voltage conversion
+- Potentiometer used as a controllable test input
+- Live ADC values transmitted over USB serial
+- Full input range tested on hardware
 
-Current firmware version: `0.1.0`
+Current firmware version: `0.2.0`
 
 ## Project Structure
 
