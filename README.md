@@ -13,8 +13,8 @@ The project is being developed incrementally to demonstrate embedded firmware ar
 - [x] USB serial console
 - [x] Firmware boot and runtime verification
 - [x] ADC sensor acquisition
-- [ ] Timer/interrupt-driven sampling
-- [ ] Circular buffering
+- [x] Timer/interrupt-driven sampling
+- [x] Circular buffering
 - [ ] Binary telemetry packets
 - [ ] CRC error detection
 - [ ] Python ground station
@@ -50,21 +50,23 @@ Planned after completion of the core telemetry system:
 - Visual Studio Code
 - Python ground-station software
 
-## Milestone V0.3 — Deterministic Timer-Driven Sampling
+## Milestone V0.4 — Circular Buffering
 
-Implemented fixed-rate ADC sampling using a repeating timer.
+Implemented a circular sample buffer between the timer-driven ADC producer and main-loop consumer.
 
 Verified functionality:
 
-- 100 Hz ADC sampling
-- Timer-driven acquisition
-- Separation of sampling from USB output
-- Shared-state synchronization between timer callback and main loop
-- Sample counter
-- Basic overrun detection
-- Zero overruns during normal testing
+- 128-entry circular sample buffer
+- Producer/consumer separation
+- Head/tail index management
+- Buffer full/empty detection
+- Dropped-sample tracking
+- Continuous 100 Hz ADC acquisition
+- Zero dropped samples during normal operation
+- Intentional consumer slowdown used to force buffer saturation
+- Full-buffer condition correctly detected and dropped samples counted
 
-Current firmware version: `0.3.0`
+Current firmware version: `0.4.0`
 
 ## Project Structure
 
