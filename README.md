@@ -50,20 +50,21 @@ Planned after completion of the core telemetry system:
 - Visual Studio Code
 - Python ground-station software
 
-## Milestone V0.2 — ADC Acquisition
+## Milestone V0.3 — Deterministic Timer-Driven Sampling
 
-Added analog data acquisition using the RP2350 ADC.
+Implemented fixed-rate ADC sampling using a repeating timer.
 
 Verified functionality:
 
-- ADC0 configured on GPIO26
-- 12-bit ADC measurements
-- Analog voltage conversion
-- Potentiometer used as a controllable test input
-- Live ADC values transmitted over USB serial
-- Full input range tested on hardware
+- 100 Hz ADC sampling
+- Timer-driven acquisition
+- Separation of sampling from USB output
+- Shared-state synchronization between timer callback and main loop
+- Sample counter
+- Basic overrun detection
+- Zero overruns during normal testing
 
-Current firmware version: `0.2.0`
+Current firmware version: `0.3.0`
 
 ## Project Structure
 
