@@ -15,7 +15,7 @@ The project is being developed incrementally to demonstrate embedded firmware ar
 - [x] ADC sensor acquisition
 - [x] Timer/interrupt-driven sampling
 - [x] Circular buffering
-- [ ] Binary telemetry packets
+- [x] Binary telemetry packets
 - [ ] CRC error detection
 - [ ] Python ground station
 - [ ] Real-time visualization and logging
@@ -50,23 +50,27 @@ Planned after completion of the core telemetry system:
 - Visual Studio Code
 - Python ground-station software
 
-## Milestone V0.4 — Circular Buffering
+## Milestone V0.5 — Binary Telemetry and Python Receiver
 
-Implemented a circular sample buffer between the timer-driven ADC producer and main-loop consumer.
+Implemented a binary telemetry protocol and host-side Python decoder.
 
 Verified functionality:
 
-- 128-entry circular sample buffer
-- Producer/consumer separation
-- Head/tail index management
-- Buffer full/empty detection
-- Dropped-sample tracking
-- Continuous 100 Hz ADC acquisition
-- Zero dropped samples during normal operation
-- Intentional consumer slowdown used to force buffer saturation
-- Full-buffer condition correctly detected and dropped samples counted
+- 18-byte binary ADC telemetry packets
+- Packet synchronization using `0xAA 0x55`
+- Protocol version and packet type fields
+- Packet sequence numbering
+- 32-bit ADC sample numbering
+- 12-bit ADC values transmitted as 16-bit fields
+- Dropped-sample count and status flags
+- Explicit little-endian serialization
+- Raw binary transmission over USB CDC
+- Python ground-station serial receiver
+- Stream synchronization and packet reconstruction
+- Live ADC and voltage decoding
+- Continuous 100 Hz telemetry with zero dropped samples during normal operation
 
-Current firmware version: `0.4.0`
+Current firmware version: `0.5.0`
 
 ## Project Structure
 
