@@ -16,8 +16,9 @@ The project is being developed incrementally to demonstrate embedded firmware ar
 - [x] Timer/interrupt-driven sampling
 - [x] Circular buffering
 - [x] Binary telemetry packets
-- [ ] CRC error detection
-- [ ] Python ground station
+- [x] CRC error detection
+- [x] Python ground station
+- [ ] Configuration/settings
 - [ ] Real-time visualization and logging
 - [ ] State-machine firmware architecture
 - [ ] Watchdog and fault handling
@@ -50,27 +51,22 @@ Planned after completion of the core telemetry system:
 - Visual Studio Code
 - Python ground-station software
 
-## Milestone V0.5 — Binary Telemetry and Python Receiver
+## Milestone V0.6 — CRC Error Detection
 
-Implemented a binary telemetry protocol and host-side Python decoder.
+Added CRC-16/CCITT-FALSE packet integrity checking to the telemetry protocol.
 
 Verified functionality:
 
-- 18-byte binary ADC telemetry packets
-- Packet synchronization using `0xAA 0x55`
-- Protocol version and packet type fields
-- Packet sequence numbering
-- 32-bit ADC sample numbering
-- 12-bit ADC values transmitted as 16-bit fields
-- Dropped-sample count and status flags
-- Explicit little-endian serialization
-- Raw binary transmission over USB CDC
-- Python ground-station serial receiver
-- Stream synchronization and packet reconstruction
-- Live ADC and voltage decoding
-- Continuous 100 Hz telemetry with zero dropped samples during normal operation
+- CRC-16/CCITT-FALSE generation on the Pico 2 W
+- CRC appended to each binary telemetry packet
+- Python ground station independently recalculates CRC
+- Valid packets accepted successfully
+- Corrupted packets detected and rejected
+- Intentional bit-flip fault injection used to validate CRC behavior
+- CRC error counter implemented in the ground station
+- Continuous 100 Hz telemetry maintained during normal operation
 
-Current firmware version: `0.5.0`
+Current firmware version: `0.6.0`
 
 ## Project Structure
 

@@ -11,21 +11,47 @@ PROTOCOL_VERSION = 0x01
 PACKET_TYPE_ADC_SAMPLE = 0x01
 
 PAYLOAD_LENGTH = 11
-PACKET_SIZE = 18
+
+PACKET_DATA_SIZE = 18
+PACKET_SIZE = 20
 
 ADC_REFERENCE_VOLTAGE = 3.3
 ADC_MAX_VALUE = 4095
 
 
+def crc16_ccitt(data):
+    """
+    CRC-16/CCITT-FALSE
+
+    Polynomial: 0x1021
+    Initial value: 0xFFFF
+    """
+
+    crc = 0xFFFF
+
+    for byte in data:
+
+        crc ^= byte << 8
+
+        for _ in range(8):
+
+            if crc & 0x8000:
+                crc = ((crc << 1) ^ 0x1021) & 0xFFFF
+            else:
+                crc = (crc << 1) & 0xFFFF
+
+    return crc
+
+
 def read_exact(serial_port, length):
-    """
-    Read exactly 'length' bytes from the serial port.
-    """
 
     data = bytearray()
 
     while len(data) < length:
-        chunk = serial_port.read(length - len(data))
+
+        chunk = serial_port.read(
+            length - len(data)
+        )
 
         if chunk:
             data.extend(chunk)
@@ -34,13 +60,11 @@ def read_exact(serial_port, length):
 
 
 def find_packet_start(serial_port):
-    """
-    Search the byte stream for the AA 55 sync sequence.
-    """
 
     previous_byte = None
 
     while True:
+
         current_byte = serial_port.read(1)
 
         if not current_byte:
@@ -48,16 +72,35 @@ def find_packet_start(serial_port):
 
         current_value = current_byte[0]
 
-        if previous_byte == 0xAA and current_value == 0x55:
+        if (
+            previous_byte == 0xAA
+            and current_value == 0x55
+        ):
             return
 
         previous_byte = current_value
 
 
+def validate_crc(packet):
+
+    received_crc = struct.unpack_from(
+        "<H",
+        packet,
+        18
+    )[0]
+
+    calculated_crc = crc16_ccitt(
+        packet[:PACKET_DATA_SIZE]
+    )
+
+    return (
+        received_crc == calculated_crc,
+        received_crc,
+        calculated_crc
+    )
+
+
 def decode_adc_packet(packet):
-    """
-    Decode one 18-byte ADC telemetry packet.
-    """
 
     protocol_version = packet[2]
     packet_type = packet[3]
@@ -120,13 +163,15 @@ def main():
     print("--------------------------------")
     print(f"Opening {SERIAL_PORT}...")
 
+    valid_packets = 0
+    crc_errors = 0
+
     with serial.Serial(
         SERIAL_PORT,
         BAUD_RATE,
         timeout=1
     ) as ser:
 
-        # Clear anything already buffered by Windows.
         ser.reset_input_buffer()
 
         print("Connected.")
@@ -134,21 +179,41 @@ def main():
 
         while True:
 
-            # Locate AA 55 packet synchronization bytes.
             find_packet_start(ser)
 
-            # We already consumed the two sync bytes.
             remaining = read_exact(
                 ser,
                 PACKET_SIZE - 2
             )
 
-            packet = SYNC_BYTES + remaining
+            packet = (
+                SYNC_BYTES
+                + remaining
+            )
+
+            crc_ok, received_crc, calculated_crc = (
+                validate_crc(packet)
+            )
+
+            if not crc_ok:
+
+                crc_errors += 1
+
+                print(
+                    "CRC ERROR | "
+                    f"Received: 0x{received_crc:04X} | "
+                    f"Calculated: 0x{calculated_crc:04X} | "
+                    f"Total CRC Errors: {crc_errors}"
+                )
+
+                continue
 
             decoded = decode_adc_packet(packet)
 
             if decoded is None:
                 continue
+
+            valid_packets += 1
 
             status_text = (
                 "BUFFER OVERRUN"
@@ -162,7 +227,8 @@ def main():
                 f"ADC: {decoded['adc']:4d} | "
                 f"VOLTAGE: {decoded['voltage']:.3f} V | "
                 f"DROPPED: {decoded['dropped']:4d} | "
-                f"STATUS: {status_text}"
+                f"STATUS: {status_text} | "
+                f"CRC: OK"
             )
 
 

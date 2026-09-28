@@ -7,7 +7,7 @@
 #include "hardware/adc.h"
 #include "hardware/sync.h"
 
-#define FIRMWARE_VERSION "0.5.0"
+#define FIRMWARE_VERSION "0.6.0"
 
 #define ADC_GPIO 26
 #define ADC_CHANNEL 0
@@ -25,7 +25,9 @@
 #define PACKET_TYPE_ADC_SAMPLE 0x01
 
 #define ADC_PAYLOAD_LENGTH 11
-#define TELEMETRY_PACKET_SIZE 18
+
+#define PACKET_DATA_SIZE 18
+#define TELEMETRY_PACKET_SIZE 20
 
 #define STATUS_BUFFER_OVERRUN 0x01
 
@@ -81,9 +83,42 @@ void write_u32_le(uint8_t *buffer, uint32_t value)
 
 
 /*
+ * CRC-16/CCITT-FALSE
+ *
+ * Polynomial: 0x1021
+ * Initial CRC: 0xFFFF
+ */
+uint16_t crc16_ccitt(
+    const uint8_t *data,
+    uint32_t length)
+{
+    uint16_t crc = 0xFFFF;
+
+    for (uint32_t i = 0; i < length; i++) {
+
+        crc ^= ((uint16_t)data[i] << 8);
+
+        for (uint8_t bit = 0; bit < 8; bit++) {
+
+            if (crc & 0x8000) {
+                crc =
+                    (uint16_t)((crc << 1) ^ 0x1021);
+            }
+            else {
+                crc =
+                    (uint16_t)(crc << 1);
+            }
+        }
+    }
+
+    return crc;
+}
+
+
+/*
  * Timer callback.
  *
- * Producer side of the circular buffer.
+ * Producer side of circular buffer.
  * Samples ADC at 100 Hz.
  */
 bool sample_timer_callback(struct repeating_timer *t)
@@ -143,7 +178,7 @@ bool sample_buffer_pop(sample_t *sample)
 
 
 /*
- * Safely read dropped-sample counter.
+ * Safely read dropped-sample count.
  */
 uint32_t get_dropped_sample_count(void)
 {
@@ -159,7 +194,7 @@ uint32_t get_dropped_sample_count(void)
 
 
 /*
- * Build binary ADC telemetry packet.
+ * Build one binary ADC telemetry packet.
  */
 void build_adc_packet(
     uint8_t *packet,
@@ -202,15 +237,29 @@ void build_adc_packet(
 
     packet[17] = status_flags;
 
+    /*
+     * Calculate CRC across bytes 0–17.
+     */
+    uint16_t crc =
+        crc16_ccitt(
+            packet,
+            PACKET_DATA_SIZE
+        );
+
+    /*
+     * Append CRC in little-endian format.
+     */
+    write_u16_le(
+        &packet[18],
+        crc
+    );
+
     packet_sequence++;
 }
 
 
 /*
- * Send raw binary packet over USB stdio.
- *
- * CR/LF translation is disabled because this
- * is binary data, not human-readable text.
+ * Send complete binary packet over USB.
  */
 void send_packet(const uint8_t *packet)
 {
@@ -227,15 +276,14 @@ int main()
 {
     stdio_init_all();
 
-    // Allow USB CDC time to enumerate.
     sleep_ms(2000);
 
-    // ADC setup
+    // ADC initialization
     adc_init();
     adc_gpio_init(ADC_GPIO);
     adc_select_input(ADC_CHANNEL);
 
-    // Start periodic sampling
+    // Timer initialization
     struct repeating_timer sample_timer;
 
     bool timer_started =
@@ -246,19 +294,8 @@ int main()
             &sample_timer
         );
 
-    /*
-     * Do not print startup text here.
-     *
-     * From this point forward the USB stream
-     * is reserved for binary telemetry packets.
-     */
-
     if (!timer_started) {
 
-        /*
-         * Later this will become part of the
-         * system fault-handling architecture.
-         */
         while (true) {
             tight_loop_contents();
         }
